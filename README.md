@@ -2,8 +2,9 @@
 
 **MemoryBench** aims to provide a standardized and extensible benchmark for evaluating memory and continual learning in LLM systems — encouraging future work toward more adaptive, feedback-driven, and efficient LLM systems.
 
+- 📢 **May 26, 2026 Updated**: This work has been accepted at ICML 2026 and selected for a SpotLight Paper!
 - 📢 **Apr. 15, 2026 Updated**: We released an easy-to-use frontend version of MemoryBench Evaluation! You can configure and run experiments with much less setup effort. See [frontend/README.md](frontend/README.md) for details.
-- 📢 **Dec. 8, 2025 Updated**: We released an extended version of MemoryBench!
+- 📢 **Dec. 8, 2025 Updated**: We released an [extended version of MemoryBench](https://huggingface.co/datasets/THUIR/MemoryBench-Full)!
 - 📢 **Dec. 5, 2025 Updated**: We released a new version of user feedback data where `Mistral-Small-3.2-24B-Instruct-2506` acts as the User Simulator!
 
 ## 🌟 Introduction
