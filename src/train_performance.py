@@ -21,6 +21,7 @@ from src.utils import (
     evaluate_and_summary,
 )
 from src.solver import SolverFactory
+from src import memory_systems
 
 from memorybench import load_memory_bench
 
@@ -187,9 +188,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--memory_system",
         type=str,
-        required=True, 
+        required=True,
         help="The memory system to use",
-        choices=["wo_memory", "a_mem", "mem0", "memoryos", "bm25_message", "embedder_message", "raptor", "bm25_dialog", "embedder_dialog"],
+        # `raptor` is intentionally accepted here even though the solver is not
+        # imported by default — kept for parity with the original signature.
+        choices=memory_systems.all_names() + ["raptor"],
     )
     parser.add_argument(
         "--memory_system_config",

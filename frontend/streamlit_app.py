@@ -22,26 +22,13 @@ RUNTIME_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 DATASET_CONFIG_DIR = ROOT / "configs" / "datasets"
 MEMORY_CONFIG_DIR = ROOT / "configs" / "memory_systems"
 
-OFF_POLICY_MEMORYS = [
-    "wo_memory",
-    "bm25_message",
-    "bm25_dialog",
-    "embedder_message",
-    "embedder_dialog",
-    "a_mem",
-    "mem0",
-    "memoryos",
-]
+# Make the in-repo `src.memory_systems` registry importable.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from src import memory_systems  # noqa: E402
 
-ON_POLICY_MEMORYS = [
-    "bm25_message",
-    "bm25_dialog",
-    "embedder_message",
-    "embedder_dialog",
-    "a_mem",
-    "mem0",
-    "memoryos",
-]
+OFF_POLICY_MEMORYS = memory_systems.all_names()
+ON_POLICY_MEMORYS = memory_systems.names_with_memory()
 
 
 def _load_json(path: Path, default):
@@ -63,17 +50,10 @@ def load_dataset_choices() -> Dict[str, List[str]]:
 
 
 def load_memory_template(memory_system: str) -> Dict:
-    default_map = {
-        "wo_memory": "base.json",
-        "a_mem": "a_mem.json",
-        "bm25_message": "bm25.json",
-        "bm25_dialog": "bm25.json",
-        "embedder_message": "embedder.json",
-        "embedder_dialog": "embedder.json",
-        "mem0": "mem0.json",
-        "memoryos": "memoryos.json",
-    }
-    filename = default_map[memory_system]
+    # The registry returns a repo-relative path; use only the file name part
+    # so this works regardless of where Streamlit was launched from.
+    cfg_path = memory_systems.get(memory_system).config_file
+    filename = Path(cfg_path).name
     return _load_json(MEMORY_CONFIG_DIR / filename, {})
 
 
@@ -88,12 +68,12 @@ def build_llm_config(provider: str, model: str, base_url: str, api_key: str, tem
     }
     if provider == "openai":
         llm_cfg["openai_base_url"] = base_url
-        if api_key:
-            llm_cfg["api_key"] = api_key
+    elif provider == "anthropic":
+        llm_cfg["anthropic_base_url"] = base_url
     else:
         llm_cfg["vllm_base_url"] = base_url
-        if api_key:
-            llm_cfg["api_key"] = api_key
+    if api_key:
+        llm_cfg["api_key"] = api_key
     return llm_cfg
 
 
@@ -162,6 +142,8 @@ def build_runtime_feedback_config(
     }
     if provider == "openai":
         cfg["llm_config"]["openai_base_url"] = llm_base_url
+    elif provider == "anthropic":
+        cfg["llm_config"]["anthropic_base_url"] = llm_base_url
     else:
         cfg["llm_config"]["vllm_base_url"] = llm_base_url
     if llm_api_key:
@@ -525,23 +507,38 @@ def run_page():
     with col3:
         memory_system = st.selectbox("Memory system", memory_choices)
 
-    if mode == "off-policy" and memory_system == "mem0" and set_name == "Open-Domain":
-        st.warning("mem0 is not supported for Open-Domain in existing scripts.")
-    if mode == "off-policy" and memory_system == "mem0" and set_name == "Long-Short":
-        st.warning("mem0 is not supported for Long-Short in existing scripts.")
+    if mode == "off-policy":
+        spec = memory_systems.get(memory_system)
+        if (dataset_type, set_name) in spec.skip_combinations:
+            st.warning(
+                f"{memory_system} is not supported for {set_name} ({dataset_type}) in existing scripts."
+            )
     if memory_system == "memoryos":
         st.info("If you use memoryos, OpenAI-compatible endpoint with provider=vllm is typically more stable in this repository.")
 
     st.markdown("### API / Model")
     c1, c2 = st.columns(2)
     with c1:
-        provider = st.selectbox("LLM provider", ["vllm", "openai"], index=0)
+        provider = st.selectbox("LLM provider", ["vllm", "openai", "anthropic"], index=0)
         llm_model = st.text_input("LLM model", value="Qwen/Qwen3-8B")
         llm_base_url = st.text_input("LLM base URL", value="http://localhost:12366/v1")
     with c2:
-        llm_api_key = st.text_input("LLM API key (optional)", value="", type="password")
+        api_key_label = "LLM API key / auth token" if provider == "anthropic" else "LLM API key (optional)"
+        llm_api_key = st.text_input(api_key_label, value="", type="password")
         temperature = st.slider("Temperature", min_value=0.0, max_value=1.5, value=0.1, step=0.05)
         retrieve_k = st.number_input("Retrieve k", min_value=1, max_value=50, value=5, step=1)
+
+    if provider == "anthropic" and memory_system in {"mem0", "a_mem", "memoryos"}:
+        st.warning(
+            f"The '{memory_system}' baseline wires its own LLM through an upstream provider system "
+            "that does not yet expose an Anthropic protocol — use vllm or openai for the memory-system "
+            "LLM, or pick a different baseline."
+        )
+    elif provider == "anthropic":
+        st.info(
+            "Anthropic provider selected. Set 'LLM base URL' to an Anthropic-compatible endpoint "
+            "(e.g. https://api.anthropic.com or your proxy). The auth token is sent as `api_key`."
+        )
 
     st.markdown("### Embedder (for embedder_* / mem0)")
     e1, e2, e3 = st.columns(3)
@@ -638,9 +635,14 @@ def run_page():
         st.warning("Stopping experiment...")
         st.rerun()
 
-    if (run_clicked or prepare_only_clicked) and mode == "off-policy" and memory_system == "mem0" and set_name in {"Open-Domain", "Long-Short"}:
-        st.error("Current scripts do not support this mem0 setting. Please change set_name or memory system.")
-        return
+    if (run_clicked or prepare_only_clicked) and mode == "off-policy":
+        spec = memory_systems.get(memory_system)
+        if (dataset_type, set_name) in spec.skip_combinations:
+            st.error(
+                f"Current scripts do not support {memory_system} on {set_name} ({dataset_type}). "
+                "Please change set_name or memory system."
+            )
+            return
 
     if run_clicked or prepare_only_clicked:
         memory_cfg = build_runtime_memory_config(
