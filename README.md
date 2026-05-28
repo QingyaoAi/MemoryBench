@@ -379,7 +379,7 @@ If you use MemoryBench in your research, please cite:
 ```bibtex
 @inproceedings{memorybench2026,
   title     = {MemoryBench: A Benchmark for Memory and Continual Learning in LLM Systems},
-  author    = {THUIR},
+  author    = {Qingyao Ai, Yichen Tang, Changyue Wang, Jianming Long, Weihang Su, Yiqun Liu},
   booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
   year      = {2026},
   note      = {Spotlight}
