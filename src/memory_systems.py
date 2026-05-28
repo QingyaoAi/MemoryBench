@@ -135,3 +135,11 @@ register(MemorySystemSpec(
     config_file="configs/memory_systems/memoryos.json",
     paper_name="MemoryOS",
 ))
+
+register(MemorySystemSpec(
+    name="light",
+    solver_class="src.solver.light.LightSolver",
+    config_class="src.solver.light.LightAgentConfig",
+    config_file="configs/memory_systems/light.json",
+    paper_name="LIGHT",
+))
