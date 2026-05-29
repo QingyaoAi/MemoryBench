@@ -62,6 +62,7 @@ LEGACY_CONFIG_MAP = {
     "mem0": "configs/memory_systems/mem0.json",
     "memoryos": "configs/memory_systems/memoryos.json",
     "light": "configs/memory_systems/light.json",
+    "tencentdb": "configs/memory_systems/tencentdb.json",
 }
 
 LEGACY_DIALOG_KEYS = {
@@ -74,6 +75,7 @@ LEGACY_DIALOG_KEYS = {
     "mem0": "dialog_mem0",
     "memoryos": "dialog_memoryos",
     "light": "dialog_light",
+    "tencentdb": "dialog_tencentdb",
 }
 
 LEGACY_SOLVER_CLASSES = {
@@ -86,6 +88,7 @@ LEGACY_SOLVER_CLASSES = {
     "mem0": ("src.solver.mem0.Mem0Solver", "src.solver.mem0.Mem0AgentConfig"),
     "memoryos": ("src.solver.memoryos.MemoryOSSolver", "src.solver.memoryos.MemoryOSAgentConfig"),
     "light": ("src.solver.light.LightSolver", "src.solver.light.LightAgentConfig"),
+    "tencentdb": ("src.solver.tencentdb.TencentDBSolver", "src.solver.tencentdb.TencentDBAgentConfig"),
 }
 
 
